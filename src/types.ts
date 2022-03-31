@@ -18,11 +18,12 @@
 // ];
 // 集锦接口
 export interface IMainData {
-    id: number | string;
+    id: number;
+    choice_del?: boolean;
     name: string;
     img_url: string;
-    length: number;
-    children: Array<ITabData> | [];
+    length?: number;
+    children: Array<ITabData>;
 }
 
 // 集锦页面接口
@@ -31,4 +32,6 @@ export interface ITabData {
     title: string;
     url: string;
     img_url: string;
+    icon_url: string;
+    choice_del?: boolean;
 }

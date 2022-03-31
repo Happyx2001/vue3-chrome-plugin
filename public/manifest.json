@@ -1,0 +1,17 @@
+{
+    "name": "Vue Chrome Plugin",
+    "description": "vue+vite+typescript的chrome仿edge集锦插件",
+    "version": "1.0",
+    "manifest_version": 3,
+    "action": {
+        "default_icon": "icon.png",
+        "default_title": "集锦demo",
+        "default_popup": "index.html"
+    },
+    "icons": {
+		"16": "icon.png",
+		"48": "icon.png",
+		"128": "icon.png"
+	},
+    "permissions": ["tabs", "storage"]
+}

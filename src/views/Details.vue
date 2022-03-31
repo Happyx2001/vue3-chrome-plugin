@@ -198,7 +198,6 @@ const sureDel = () => {
           v-else
           ref="InputRef"
           v-model="detailName"
-          class="ml-1 w-20"
           @keyup.enter="changeDetailName"
           @blur="changeDetailName"
         ></el-input>
@@ -258,6 +257,7 @@ const sureDel = () => {
       }
       .collection-name {
         font-weight: 700;
+        font-size: 16px;
         flex: 1;
         margin-left: 5px;
         padding: 5px 0;

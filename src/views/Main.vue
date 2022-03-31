@@ -67,6 +67,8 @@ const addDetail = () => {
   try {
     //@ts-ignore
     chrome.storage.sync.set({ data: mainData.data });
+    //@ts-ignore
+    chrome.runtime.sendMessage({ msg: "reload" });
   } catch (err) {
     console.log(err);
   }

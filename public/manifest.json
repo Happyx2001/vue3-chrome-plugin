@@ -9,9 +9,12 @@
         "default_popup": "index.html"
     },
     "icons": {
-		"16": "icon.png",
-		"48": "icon.png",
-		"128": "icon.png"
-	},
-    "permissions": ["tabs", "storage"]
+        "16": "icon.png",
+        "48": "icon.png",
+        "128": "icon.png"
+    },
+    "permissions": ["tabs", "storage", "contextMenus"],
+    "background": {
+        "service_worker": "js/background.js"
+    }
 }

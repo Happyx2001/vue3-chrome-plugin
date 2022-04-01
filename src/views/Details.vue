@@ -11,6 +11,7 @@ import { useRouter, useRoute } from "vue-router";
 import type { ElInput } from "element-plus";
 import { IMainData, ITabData } from "../types";
 import { Close } from "@element-plus/icons-vue";
+import { imageCompression, compress } from "../utils";
 
 let detailName = ref<string>("");
 let inputShow = ref<boolean>(true);
@@ -27,6 +28,12 @@ const route: any = useRoute();
 onMounted(() => {
   // web页面开发环境下获取不到 chrome，为了防止之后的运行错误，使用 try catch 捕获错误
   try {
+    // 获取当前页面的截屏S
+    // @ts-ignore
+    chrome.tabs.captureVisibleTab(null, async function (imgUrl) {
+      img_url.value = await compress(imgUrl, 30, 0.5);
+    });
+
     // @ts-ignore
     chrome.storage.sync.get(["data", "hashId"], ({ data, hashId }) => {
       if (data) {
@@ -97,25 +104,40 @@ const changeDetailName = () => {
 
 // 获取tab页面的数据并且添加
 const getTabData = async () => {
+  //   saveImgBaseUrl();
   try {
-    let img: string = "";
-    // 获取当前页面的截屏
-    //@ts-ignore
-    chrome.tabs.captureVisibleTab(null, function (img_url) {
-      img = img_url;
-    });
     // 获取tab页面的数据
     // @ts-ignore
-    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    // 添加tab页面
-    detailData.data.push({
-      cId: popupHashId.value,
-      title: tab.title,
-      url: tab.url,
-      img_url: img,
-      icon_url: tab.favIconUrl,
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      let tab = tabs[0];
+      // let imgUrl: string;
+
+      // 添加tab页面
+      detailData.data.push({
+        cId: popupHashId.value,
+        title: tab.title,
+        url: tab.url,
+        img_url: img_url.value,
+        icon_url: tab.favIconUrl,
+      });
+      popupHashId.value++;
+
+      // 将tab页面的数据加入集锦之中
+      mainData.data.forEach((item) => {
+        if (item.id == route.query.id) {
+          item.children = detailData.data;
+        }
+      });
+
+      // 更新 chrome.storage
+      // @ts-ignore
+      chrome.storage.sync.set({
+        data: mainData.data,
+        hashId: popupHashId.value,
+      });
+      // @ts-ignore
+      chrome.runtime.sendMessage({ msg: "reload" });
     });
-    popupHashId.value++;
 
     // detailData.data.push({
     //   cId: 1,
@@ -124,23 +146,23 @@ const getTabData = async () => {
     //   img_url: "...",
     //   icon_url: "...",
     // });
-
-    // 将tab页面的数据加入集锦之中
-    mainData.data.forEach((item) => {
-      if (item.id == route.query.id) {
-        item.children = detailData.data;
-      }
-    });
-
-    // 更新 chrome.storage
-    // @ts-ignore
-    chrome.storage.sync.set({ data: mainData.data, hashId: popupHashId.value });
-    //@ts-ignore
-    chrome.runtime.sendMessage({ msg: "reload" });
   } catch (err) {
     // @ts-ignore
-    // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
-    console.log(err);
+    chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
+    // console.log(err);
+  }
+};
+
+const saveImgBaseUrl = async () => {
+  try {
+    // 获取当前页面的截屏
+    // @ts-ignore
+    img_url.value = await chrome.tabs.captureVisibleTab(null);
+    alert(img_url.value);
+  } catch (err) {
+    // @ts-ignore
+    chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
+    // console.log(err);
   }
 };
 
@@ -209,9 +231,14 @@ const sureDel = () => {
 
 const tabCapture = () => {
   // @ts-ignore
-  chrome.tabs.captureVisibleTab(null, function (img) {
-    img_url.value = img;
-    alert(img);
+  chrome.tabs.captureVisibleTab(null, async function (img) {
+    let val = await compress(img, 300, 0.6);
+    alert(val);
+    let downloadAnchorNode = document.createElement("a");
+    downloadAnchorNode.setAttribute("href", val);
+    downloadAnchorNode.setAttribute("download", "img.jpeg");
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   });
 };
 </script>
@@ -271,6 +298,7 @@ const tabCapture = () => {
       <img :src="img_url" alt="" style="height: 100px; width: 100px" />
 
       <div>当前集锦：{{ jijinId }}</div>
+      <div>当前截图的大小：{{ img_url.length }}</div>
     </main>
   </div>
 </template>

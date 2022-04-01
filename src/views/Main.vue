@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from "@vue/runtime-core";
 import { useRouter } from "vue-router";
 import { IMainData, ITabData } from "../types";
-import { Close } from "@element-plus/icons-vue";
+import { Close, Plus } from "@element-plus/icons-vue";
 import html2canvas from "html2canvas";
 
 // tips: 一个数组对象的接口可以没有对象元素
@@ -136,10 +136,34 @@ const sureDel = () => {
   }
 };
 
-const captureImg = () => {
-  html2canvas(document.body).then((canvas) => {
-    imgSrc.value = canvas.toDataURL("image/png");
-    console.log(imgSrc.value);
+const addChildren = (id: number) => {
+  // @ts-ignore
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    let tab = tabs[0];
+    // let imgUrl: string;
+
+    // 将tab页面的数据加入集锦之中
+    mainData.data.forEach((item) => {
+      if (item.id == id) {
+        item.children.push({
+          cId: popupHashId.value,
+          title: tab.title,
+          url: tab.url,
+          img_url: "...",
+          icon_url: tab.favIconUrl,
+        });
+      }
+    });
+    popupHashId.value++;
+
+    // 更新 chrome.storage
+    // @ts-ignore
+    chrome.storage.sync.set({
+      data: mainData.data,
+      hashId: popupHashId.value,
+    });
+    // @ts-ignore
+    chrome.runtime.sendMessage({ msg: "reload" });
   });
 };
 </script>
@@ -180,6 +204,11 @@ const captureImg = () => {
           size="large"
           v-model="item.choice_del"
         ></el-checkbox>
+        <el-button
+          @click.stop="addChildren(item.id)"
+          circle
+          icon="Plus"
+        ></el-button>
       </div>
       <div>{{ JSON.stringify(mainData.data) }}</div>
     </div>

@@ -17,9 +17,10 @@ let inputShow = ref<boolean>(true);
 let mainData = reactive<{ data: IMainData[] }>({ data: [] });
 let detailData = reactive<{ data: ITabData[] }>({ data: [] });
 let choiceDelArr = reactive<{ num: number[] }>({ num: [] });
-let testdata = ref<string>("");
 let jijinId = ref<string>("");
 let InputRef = ref<InstanceType<typeof ElInput>>();
+let popupHashId = ref<number>(1);
+let img_url = ref<string>("");
 
 const router: any = useRouter();
 const route: any = useRoute();
@@ -27,7 +28,7 @@ onMounted(() => {
   // web页面开发环境下获取不到 chrome，为了防止之后的运行错误，使用 try catch 捕获错误
   try {
     // @ts-ignore
-    chrome.storage.sync.get("data", ({ data }) => {
+    chrome.storage.sync.get(["data", "hashId"], ({ data, hashId }) => {
       if (data) {
         // tips：从chrome.storage中取出的数据一律为 JSON 格式，因此将对象内的数据都存到数组中去
         for (let index in data) {
@@ -45,8 +46,14 @@ onMounted(() => {
       } else {
         mainData.data = [];
       }
+
+      if (hashId) {
+        popupHashId.value = parseInt(hashId);
+      }
     });
   } catch (err) {
+    // @ts-ignore
+    // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
     console.log(err);
   }
   // 获取路由query参数 用于判断是哪个集锦
@@ -77,30 +84,38 @@ const changeDetailName = () => {
   try {
     // @ts-ignore
     chrome.storage.sync.set({ data: mainData.data });
+    //@ts-ignore
+    chrome.runtime.sendMessage({ msg: "reload" });
   } catch (err) {
+    // @ts-ignore
+    // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
     console.log(err);
   }
+
   inputShow.value = true;
 };
 
 // 获取tab页面的数据并且添加
 const getTabData = async () => {
   try {
+    let img: string = "";
+    // 获取当前页面的截屏
+    //@ts-ignore
+    chrome.tabs.captureVisibleTab(null, function (img_url) {
+      img = img_url;
+    });
     // 获取tab页面的数据
     // @ts-ignore
     let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     // 添加tab页面
-    let id: number = 1;
-    if (detailData.data.length) {
-      id = detailData.data[detailData.data.length - 1].cId + 1;
-    }
     detailData.data.push({
-      cId: id,
+      cId: popupHashId.value,
       title: tab.title,
       url: tab.url,
-      img_url: "...",
+      img_url: img,
       icon_url: tab.favIconUrl,
     });
+    popupHashId.value++;
 
     // detailData.data.push({
     //   cId: 1,
@@ -119,8 +134,12 @@ const getTabData = async () => {
 
     // 更新 chrome.storage
     // @ts-ignore
-    chrome.storage.sync.set({ data: mainData.data });
+    chrome.storage.sync.set({ data: mainData.data, hashId: popupHashId.value });
+    //@ts-ignore
+    chrome.runtime.sendMessage({ msg: "reload" });
   } catch (err) {
+    // @ts-ignore
+    // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
     console.log(err);
   }
 };
@@ -128,7 +147,7 @@ const getTabData = async () => {
 // 点击tab 利用 window.open进行页面跳转
 const goUrl = (url: string) => {
   // window.open 打开新标签页
-  window.open(url);
+  window.open(url) || (location.href = url);
 };
 
 // 计算有几个需要删除、控制删除框的出现
@@ -148,6 +167,7 @@ const choiceDelTab = (index: number) => {
   choiceDelArr.num.push(index);
 };
 
+// 取消删除
 const cancelDel = () => {
   detailData.data.forEach((item) => {
     item.choice_del = false;
@@ -178,14 +198,27 @@ const sureDel = () => {
   try {
     //@ts-ignore
     chrome.storage.sync.set({ data: mainData.data });
+    //@ts-ignore
+    chrome.runtime.sendMessage({ msg: "reload" });
   } catch (err) {
+    // @ts-ignore
+    // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
     console.log(err);
   }
+};
+
+const tabCapture = () => {
+  // @ts-ignore
+  chrome.tabs.captureVisibleTab(null, function (img) {
+    img_url.value = img;
+    alert(img);
+  });
 };
 </script>
 
 <template>
   <div id="detail">
+    <!-- 头部 -->
     <header>
       <div class="header-top">
         <el-icon @click="goMain">
@@ -211,7 +244,7 @@ const sureDel = () => {
         <el-button size="small" @click="sureDel">删除</el-button>
       </div>
     </header>
-
+    <!-- 主题内容：集锦内部保存的tab页面 -->
     <main>
       <div
         v-for="item in detailData.data"
@@ -220,16 +253,23 @@ const sureDel = () => {
         @click="goUrl(item.url)"
       >
         <div class="collection-detail">
-          <div class="title">{{ item.title }}</div>
-          <div class="url">{{ item.url }}</div>
+          <div class="title">
+            <span class="title-in">{{ item.title }}</span>
+          </div>
+          <span class="url">
+            <span class="url-in">{{ item.url }}</span>
+          </span>
         </div>
-        <div class="img"></div>
+        <img :src="item.img_url" alt="" class="img" />
         <el-checkbox
           @click.stop="choiceDelTab(item.cId)"
           size="large"
           v-model="item.choice_del"
         ></el-checkbox>
       </div>
+      <el-button @click="tabCapture">页面截屏</el-button>
+      <img :src="img_url" alt="" style="height: 100px; width: 100px" />
+
       <div>当前集锦：{{ jijinId }}</div>
     </main>
   </div>
@@ -274,8 +314,7 @@ const sureDel = () => {
     .addDetail {
       font-size: 14px;
       font-weight: 700;
-      margin-left: 5px;
-      margin-bottom: 6px;
+      margin: 5px 0 6px 5px;
       display: inline-block;
       color: rgb(10, 139, 238);
       cursor: pointer;
@@ -339,15 +378,16 @@ const sureDel = () => {
         }
         .title {
           font-weight: 700;
+          padding-bottom: 2px;
         }
-        &:hover .title {
+        &:hover .title-in {
           border-bottom: 1px solid black;
         }
       }
       .img {
         height: 100%;
         width: 80px;
-        background-color: red;
+        // background-color: red;
       }
       .el-checkbox {
         position: absolute;

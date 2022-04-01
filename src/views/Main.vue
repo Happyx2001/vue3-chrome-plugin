@@ -3,22 +3,25 @@ import { computed, onMounted, reactive, ref } from "@vue/runtime-core";
 import { useRouter } from "vue-router";
 import { IMainData, ITabData } from "../types";
 import { Close } from "@element-plus/icons-vue";
-import { main } from "@popperjs/core";
+import html2canvas from "html2canvas";
 
 // tips: 一个数组对象的接口可以没有对象元素
 let mainData = reactive<{ data: IMainData[] }>({ data: [] });
 let test = ref("");
 let choiceDelArr = reactive<{ num: number[] }>({ num: [] });
+let popupHashId = ref<number>(1);
+let imgSrc = ref<string>("");
 onMounted(() => {
   // web页面开发环境下获取不到 chrome，为了防止之后的运行错误，使用 try catch 捕获错误
   try {
     // @ts-ignore
-    chrome.storage.sync.get("data", ({ data }) => {
+    chrome.storage.sync.get(["data", "hashId"], ({ data, hashId }) => {
       if (data) {
         // tips：从chrome.storage中取出的数据为 JSON 格式，因此将对象内的数据遍历存到数组中去
         for (let index in data) {
           mainData.data.push(data[index]);
         }
+        // 获取集锦内的children信息
         mainData.data.forEach((item) => {
           let newChild: ITabData[] = [];
           for (let index in item.children) {
@@ -29,8 +32,17 @@ onMounted(() => {
       } else {
         mainData.data = [];
       }
+
+      if (hashId) {
+        popupHashId.value = parseInt(hashId);
+      }
+
+      //@ts-ignore
+      chrome.runtime.sendMessage({ msg: "reload" });
     });
   } catch (err) {
+    // @ts-ignore
+    // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
     console.log(err);
   }
 });
@@ -50,30 +62,28 @@ const goDetail = (id: number, name: string) => {
 
 // 启动新集锦
 const addDetail = () => {
-  let id: number = 1;
   let name: string = "新建集锦";
-  if (mainData.data.length) {
-    id = mainData.data[mainData.data.length - 1].id + 1;
-  }
-
   mainData.data.push({
-    id,
-    name: name,
+    id: popupHashId.value,
+    name,
     img_url: "",
     choice_del: false,
     children: [],
   });
+  popupHashId.value++;
 
   try {
     //@ts-ignore
-    chrome.storage.sync.set({ data: mainData.data });
+    chrome.storage.sync.set({ data: mainData.data, hashId: popupHashId.value });
     //@ts-ignore
     chrome.runtime.sendMessage({ msg: "reload" });
   } catch (err) {
+    // @ts-ignore
+    // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
     console.log(err);
   }
 
-  goDetail(id, name);
+  goDetail(--popupHashId.value, name);
 };
 
 // 计算有几个需要删除、控制删除框的出现
@@ -117,9 +127,20 @@ const sureDel = () => {
   try {
     //@ts-ignore
     chrome.storage.sync.set({ data: mainData.data });
+    //@ts-ignore
+    chrome.runtime.sendMessage({ msg: "reload" });
   } catch (err) {
+    // @ts-ignore
+    // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
     console.log(err);
   }
+};
+
+const captureImg = () => {
+  html2canvas(document.body).then((canvas) => {
+    imgSrc.value = canvas.toDataURL("image/png");
+    console.log(imgSrc.value);
+  });
 };
 </script>
 

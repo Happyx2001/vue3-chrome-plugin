@@ -18,7 +18,6 @@ let inputShow = ref<boolean>(true);
 let mainData = reactive<{ data: IMainData[] }>({ data: [] });
 let detailData = reactive<{ data: ITabData[] }>({ data: [] });
 let choiceDelArr = reactive<{ num: number[] }>({ num: [] });
-let jijinId = ref<string>("");
 let InputRef = ref<InstanceType<typeof ElInput>>();
 let popupHashId = ref<number>(1);
 let img_url = ref<string>("");
@@ -30,7 +29,7 @@ onMounted(() => {
   try {
     // 获取当前页面的截屏S
     // @ts-ignore
-    chrome.tabs.captureVisibleTab(null, async function (imgUrl) {
+    chrome.tabs.captureVisibleTab(null, async function (imgUrl: string) {
       img_url.value = await compress(imgUrl, 30, 0.5);
     });
 
@@ -64,7 +63,6 @@ onMounted(() => {
     console.log(err);
   }
   // 获取路由query参数 用于判断是哪个集锦
-  jijinId.value = route.query.id;
   detailName.value = route.query.name;
 });
 
@@ -104,7 +102,10 @@ const changeDetailName = () => {
 
 // 获取tab页面的数据并且添加
 const getTabData = async () => {
-  //   saveImgBaseUrl();
+  if (JSON.stringify(mainData.data).length > 6000) {
+    img_url.value = "";
+  }
+
   try {
     // 获取tab页面的数据
     // @ts-ignore
@@ -138,27 +139,6 @@ const getTabData = async () => {
       // @ts-ignore
       chrome.runtime.sendMessage({ msg: "reload" });
     });
-
-    // detailData.data.push({
-    //   cId: 1,
-    //   title: "测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试",
-    //   url: "测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试",
-    //   img_url: "...",
-    //   icon_url: "...",
-    // });
-  } catch (err) {
-    // @ts-ignore
-    chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
-    // console.log(err);
-  }
-};
-
-const saveImgBaseUrl = async () => {
-  try {
-    // 获取当前页面的截屏
-    // @ts-ignore
-    img_url.value = await chrome.tabs.captureVisibleTab(null);
-    alert(img_url.value);
   } catch (err) {
     // @ts-ignore
     chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
@@ -228,19 +208,6 @@ const sureDel = () => {
     console.log(err);
   }
 };
-
-const tabCapture = () => {
-  // @ts-ignore
-  chrome.tabs.captureVisibleTab(null, async function (img) {
-    let val = await compress(img, 300, 0.6);
-    alert(val);
-    let downloadAnchorNode = document.createElement("a");
-    downloadAnchorNode.setAttribute("href", val);
-    downloadAnchorNode.setAttribute("download", "img.jpeg");
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  });
-};
 </script>
 
 <template>
@@ -287,18 +254,14 @@ const tabCapture = () => {
             <span class="url-in">{{ item.url }}</span>
           </span>
         </div>
-        <img :src="item.img_url" alt="" class="img" />
+        <img v-if="item.img_url" :src="item.img_url" alt="" class="img" />
+        <div class="img" v-else></div>
         <el-checkbox
           @click.stop="choiceDelTab(item.cId)"
           size="large"
           v-model="item.choice_del"
         ></el-checkbox>
       </div>
-      <el-button @click="tabCapture">页面截屏</el-button>
-      <img :src="img_url" alt="" style="height: 100px; width: 100px" />
-
-      <div>当前集锦：{{ jijinId }}</div>
-      <div>当前截图的大小：{{ img_url.length }}</div>
     </main>
   </div>
 </template>
@@ -415,7 +378,7 @@ const tabCapture = () => {
       .img {
         height: 100%;
         width: 80px;
-        // background-color: red;
+        background-color: rgb(237, 237, 237);
       }
       .el-checkbox {
         position: absolute;

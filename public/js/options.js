@@ -4,10 +4,13 @@
     let Json = document.getElementById('collection-json');
     let downloadBtn = document.getElementById('downloadBtn');
     let showBtn = document.getElementById('showBtn');
+    let updateBtn = document.getElementById('updateBtn');
+    let updateInp = document.getElementById('updateInp');
 
     // 绑定事件
     downloadBtn.addEventListener('click', downloadJSON);
     showBtn.addEventListener('click', showJSON);
+    updateBtn.addEventListener('click', updateJSON);
 
     // chrome.runtime.onMessage.addListener(function (
     //     request,
@@ -33,8 +36,7 @@
         chrome.storage.sync.get('data', ({ data }) => {
             JSONData = JSON.stringify(data);
             let dataStr =
-                'data:text/json;charset=utf-8,' +
-                encodeURIComponent(JSON.stringify(JSONData));
+                'data:text/plan;charset=utf-8,' + encodeURIComponent(JSONData);
             // 创建虚拟标签进行下载
             let downloadAnchorNode = document.createElement('a');
             downloadAnchorNode.setAttribute('href', dataStr);
@@ -42,5 +44,13 @@
             downloadAnchorNode.click();
             downloadAnchorNode.remove();
         });
+    }
+
+    // 上传JSON文件
+    function updateJSON() {
+        let val = updateInp.value;
+        chrome.storage.sync.set({ data: JSON.parse(val) });
+        alert('集锦配置已经恢复');
+        console.log(JSON.parse(val));
     }
 })();

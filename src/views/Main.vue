@@ -7,7 +7,6 @@ import { compress } from "../utils";
 
 // tips: 一个数组对象的接口可以没有对象元素
 let mainData = reactive<{ data: IMainData[] }>({ data: [] });
-let test = ref("");
 let choiceDelArr = reactive<{ num: number[] }>({ num: [] });
 let popupHashId = ref<number>(1);
 let imgSrc = ref<string>("");
@@ -21,7 +20,7 @@ onMounted(() => {
   try {
     // 获取当前页面的截屏S
     // @ts-ignore
-    chrome.tabs.captureVisibleTab(null, async function (imgUrl) {
+    chrome.tabs.captureVisibleTab(null, async function (imgUrl: string) {
       imgSrc.value = await compress(imgUrl, 30, 0.5);
     });
 
@@ -112,6 +111,7 @@ let delDetailShow = computed(() => {
 const choiceIndex = (index: number) => {
   console.log(index);
   choiceDelArr.num.push(index);
+  resetDetailShow.value = false;
 };
 
 // 取消选择删除
@@ -126,6 +126,11 @@ const cancelDel = () => {
 const sureDel = () => {
   let newData: any[] = [];
   choiceDelArr.num = [...new Set(choiceDelArr.num)];
+
+  // 记录删除数据
+  resetDetailNum.value = choiceDelArr.num.length;
+  resetDetailData.data = mainData.data;
+
   mainData.data.forEach((item) => {
     if (!choiceDelArr.num.includes(item.id)) {
       newData.push(item);
@@ -145,6 +150,33 @@ const sureDel = () => {
     // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
     console.log(err);
   }
+
+  resetDetailShow.value = true;
+};
+
+// 关闭撤销删除框
+const resetCancelDel = () => {
+  mainData.data = resetDetailData.data;
+  cancelDel();
+  resetDetailShow.value = false;
+
+  // 更新数据
+  try {
+    //@ts-ignore
+    chrome.storage.sync.set({ data: mainData.data });
+    //@ts-ignore
+    chrome.runtime.sendMessage({ msg: "reload" });
+  } catch (err) {
+    // @ts-ignore
+    // chrome.runtime.sendMessage({ msg: "catchErr", errMsg: err });
+    console.log(err);
+  }
+};
+
+// 关闭撤销删除框
+const resetCancel = () => {
+  resetDetailShow.value = false;
+  resetDetailData.data = [];
 };
 
 // 直接添加进集锦
@@ -200,12 +232,16 @@ const addChildren = (id: number) => {
         <el-button size="small" @click="sureDel">删除</el-button>
       </div>
       <!-- 撤销删除框 -->
-      <div class="delDetail" v-if="resetDetailShow">
+      <div class="cancelDel delDetail" v-if="resetDetailShow">
         <div>
-          <el-button :icon="Close" size="small" @click="cancelDel"></el-button>
-          <span>{{ resetDetailNum }}项已删除</span>
+          <el-button
+            :icon="Close"
+            size="small"
+            @click="resetCancel"
+          ></el-button>
+          <span>已删除{{ resetDetailNum }}个集锦</span>
         </div>
-        <el-button size="small" @click="sureDel">关闭</el-button>
+        <el-button size="small" @click="resetCancelDel">撤销</el-button>
       </div>
     </div>
     <!-- 主题内容：集锦 -->
@@ -246,7 +282,6 @@ const addChildren = (id: number) => {
           :icon="Plus"
         ></el-button>
       </div>
-      <div>{{ JSON.stringify(mainData.data).length }}</div>
     </div>
   </div>
 </template>
@@ -289,6 +324,19 @@ const addChildren = (id: number) => {
         color: white;
         &:hover {
           background-color: rgb(97, 97, 97);
+        }
+      }
+    }
+    .cancelDel {
+      color: black;
+      background-color: white;
+      box-shadow: 0px 1px 5px rgba(0, 0, 0, 0.5);
+      .el-button {
+        background-color: white;
+        border: none;
+        color: black;
+        &:hover {
+          background-color: rgb(248, 250, 255);
         }
       }
     }

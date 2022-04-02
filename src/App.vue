@@ -10,6 +10,5 @@
 #app {
   width: 320px;
   height: 580px;
-  border: 1px solid black;
 }
 </style>

@@ -1,16 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>chrome集锦插件设置页面</title>
-</head>
-<body>
-    <h1>chrome集锦插件设置页面</h1>
-    <button id="showBtn">显示集锦的JSON配置</button>
-    <button id="downloadBtn">下载集锦的JSON配置（备份）</button>
-    <div>集锦的JSON配置：<span id="collection-json"></span></div>
-    <script src="../js/options.js"></script>
-</body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>chrome集锦插件设置页面</title>
+        <style>
+            .json-show {
+                width: 500px;
+                height: 500px;
+                border: 1px solid black;
+            }
+            button {
+                margin-bottom: 20px;
+            }
+
+            textarea {
+                margin-right: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>chrome集锦插件设置页面</h1>
+        <div style="display: flex">
+            <div>
+                <button id="showBtn">显示集锦的JSON配置</button>
+                <button id="downloadBtn">下载集锦的JSON配置（备份）</button>
+                <br />
+
+                <textarea
+                    name=""
+                    id="collection-json"
+                    style="width: 500px; height: 500px"
+                    placeholder="输入要恢复的json配置（字符串格式）"
+                >
+                </textarea>
+            </div>
+            <div>
+                <button id="updateBtn">点击恢复集锦的JSON配置</button>
+                <br />
+                <textarea
+                    name=""
+                    id="updateInp"
+                    style="width: 500px; height: 500px"
+                >
+                </textarea>
+            </div>
+        </div>
+        <script src="../js/options.js"></script>
+    </body>
 </html>

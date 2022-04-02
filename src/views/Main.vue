@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref } from "@vue/runtime-core";
 import { useRouter } from "vue-router";
 import { IMainData, ITabData } from "../types";
 import { Close, Plus } from "@element-plus/icons-vue";
-import html2canvas from "html2canvas";
+import { compress } from "../utils";
 
 // tips: 一个数组对象的接口可以没有对象元素
 let mainData = reactive<{ data: IMainData[] }>({ data: [] });
@@ -11,9 +11,20 @@ let test = ref("");
 let choiceDelArr = reactive<{ num: number[] }>({ num: [] });
 let popupHashId = ref<number>(1);
 let imgSrc = ref<string>("");
+// 暂存区的数据
+let resetDetailData = reactive<{ data: IMainData[] }>({ data: [] });
+let resetDetailShow = ref<boolean>(false);
+let resetDetailNum = ref<number>(0);
+
 onMounted(() => {
   // web页面开发环境下获取不到 chrome，为了防止之后的运行错误，使用 try catch 捕获错误
   try {
+    // 获取当前页面的截屏S
+    // @ts-ignore
+    chrome.tabs.captureVisibleTab(null, async function (imgUrl) {
+      imgSrc.value = await compress(imgUrl, 30, 0.5);
+    });
+
     // @ts-ignore
     chrome.storage.sync.get(["data", "hashId"], ({ data, hashId }) => {
       if (data) {
@@ -136,7 +147,12 @@ const sureDel = () => {
   }
 };
 
+// 直接添加进集锦
 const addChildren = (id: number) => {
+  if (JSON.stringify(mainData.data).length > 6000) {
+    imgSrc.value = "";
+  }
+
   // @ts-ignore
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     let tab = tabs[0];
@@ -149,7 +165,7 @@ const addChildren = (id: number) => {
           cId: popupHashId.value,
           title: tab.title,
           url: tab.url,
-          img_url: "...",
+          img_url: imgSrc.value,
           icon_url: tab.favIconUrl,
         });
       }
@@ -175,12 +191,21 @@ const addChildren = (id: number) => {
       <span>集锦</span>
       <br />
       <div @click="addDetail" class="addDetail">+ 启动新集锦</div>
+      <!-- 确认删除框 -->
       <div class="delDetail" v-if="delDetailShow">
         <div>
           <el-button :icon="Close" size="small" @click="cancelDel"></el-button>
           <span>{{ delDetailShow }}项已选择</span>
         </div>
         <el-button size="small" @click="sureDel">删除</el-button>
+      </div>
+      <!-- 撤销删除框 -->
+      <div class="delDetail" v-if="resetDetailShow">
+        <div>
+          <el-button :icon="Close" size="small" @click="cancelDel"></el-button>
+          <span>{{ resetDetailNum }}项已删除</span>
+        </div>
+        <el-button size="small" @click="sureDel">关闭</el-button>
       </div>
     </div>
     <!-- 主题内容：集锦 -->
@@ -192,7 +217,17 @@ const addChildren = (id: number) => {
         @click="goDetail(item.id, item.name)"
         :class="['collection', { typeA: item.choice_del }]"
       >
-        <div class="img"></div>
+        <img
+          v-if="
+            item.children.length &&
+            item.children[item.children.length - 1].img_url
+              ? true
+              : false
+          "
+          class="img"
+          :src="item.children[item.children.length - 1].img_url"
+        />
+        <div class="img" v-else></div>
         <div class="text">
           <p class="title">
             <b>{{ item.name }}</b>
@@ -205,12 +240,13 @@ const addChildren = (id: number) => {
           v-model="item.choice_del"
         ></el-checkbox>
         <el-button
+          class="add-btn"
           @click.stop="addChildren(item.id)"
           circle
-          icon="Plus"
+          :icon="Plus"
         ></el-button>
       </div>
-      <div>{{ JSON.stringify(mainData.data) }}</div>
+      <div>{{ JSON.stringify(mainData.data).length }}</div>
     </div>
   </div>
 </template>
@@ -274,11 +310,14 @@ const addChildren = (id: number) => {
         .el-checkbox {
           display: flex;
         }
+        .el-button {
+          opacity: 1;
+        }
       }
       .img {
         height: 100%;
         width: 60px;
-        background-color: red;
+        background-color: rgb(237, 237, 237);
       }
       .text {
         margin-left: 15px;
@@ -295,6 +334,13 @@ const addChildren = (id: number) => {
         right: 6px;
         top: -6px;
       }
+      .el-button {
+        opacity: 0;
+        position: absolute;
+        left: 25px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
     }
   }
 
@@ -307,6 +353,10 @@ const addChildren = (id: number) => {
       display: flex !important;
       right: 5px !important;
       top: -7px !important;
+    }
+
+    .el-button {
+      left: 22px;
     }
   }
 }

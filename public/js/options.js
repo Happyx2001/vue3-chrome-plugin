@@ -32,15 +32,15 @@
     function downloadJSON() {
         chrome.storage.sync.get('data', ({ data }) => {
             JSONData = JSON.stringify(data);
+            let dataStr =
+                'data:text/json;charset=utf-8,' +
+                encodeURIComponent(JSON.stringify(JSONData));
+            // 创建虚拟标签进行下载
+            let downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute('href', dataStr);
+            downloadAnchorNode.setAttribute('download', '集锦配置.json');
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
         });
-        let datastr =
-            'data:text/json;charset=utf-8,' +
-            encodeURIComponent(JSON.stringify(JSONData));
-        // 创建虚拟标签进行下载
-        let downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute('href', datastr);
-        downloadAnchorNode.setAttribute('download', '集锦配置.json');
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
     }
 })();

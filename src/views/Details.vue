@@ -11,7 +11,7 @@ import { useRouter, useRoute } from "vue-router";
 import type { ElInput } from "element-plus";
 import { IMainData, ITabData } from "../types";
 import { Close } from "@element-plus/icons-vue";
-import { imageCompression, compress } from "../utils";
+import { compress } from "../utils";
 
 let detailName = ref<string>("");
 let inputShow = ref<boolean>(true);
